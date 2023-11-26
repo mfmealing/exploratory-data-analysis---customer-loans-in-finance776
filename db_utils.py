@@ -16,7 +16,6 @@ class RDSDatabaseConnector:
 
     def engine_init(self):
         engine = create_engine(f"postgresql+psycopg2://{self.creds['RDS_USER']}:{self.creds['RDS_PASSWORD']}@{self.creds['RDS_HOST']}:{self.creds['RDS_PORT']}/{self.creds['RDS_DATABASE']}")
-        #engine.execution_options(isolation_level='AUTOCOMMIT').connect()
         return engine
     
     def create_df(self, engine):
@@ -29,6 +28,7 @@ class RDSDatabaseConnector:
 def csv_to_df():
     loans_df = pd.read_csv('loan_payments.csv', index_col=0)
     return loans_df
+
 
 if __name__ == "__main__":
     loans = RDSDatabaseConnector(load_yaml())
