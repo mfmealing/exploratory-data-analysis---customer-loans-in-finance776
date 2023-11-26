@@ -30,12 +30,12 @@ def csv_to_df():
     loans_df = pd.read_csv('loan_payments.csv', index_col=0)
     return loans_df
 
+if __name__ == "__main__":
+    loans = RDSDatabaseConnector(load_yaml())
+    loans_engine = loans.engine_init()
+    loans_dataframe = loans.create_df(loans_engine)
+    loans.df_to_csv(loans_dataframe)
 
-loans = RDSDatabaseConnector(load_yaml())
-loans_engine = loans.engine_init()
-loans_dataframe = loans.create_df(loans_engine)
-loans.df_to_csv(loans_dataframe)
-
-loans_df = csv_to_df()
-print(loans_df.shape)
-display(loans_df.head())
+    loans_df = csv_to_df()
+    print(loans_df.shape)
+    display(loans_df.head())
