@@ -8,14 +8,24 @@ This information will enable the business to make more informed decisions about 
 By conducting exploratory data analysis on the loan data, the aim is to gain a deeper understanding of the risk and return associated with the business' loans.
 Ultimately, the goal is to improve the performance and profitability of the loan portfolio.  
   
-Currently the code will create a dataframe and .csv file from an online source containing loan payments.
+Currently the code will create a dataframe and .csv file from an online source containing loan payments.  
+From this .csv file, the columns are updated to more appropriate data types and then NaNs are removed by either dropping entire columns (if the percentage of NaNs is too high) or 
+imputing the NaN values with appropriate values. A small number of rows are also removed where the NaNs cannot be imputed (e.g. times). The number and percentage of NaNs before and 
+after is then printed alongside a matrix plot before and after the NaNs are removed.  
+The skew of the data is then adjusted, with any columns that have a skew above 2 or below -2 transformed to reduce the skew as much as possible. A histogram of one column before 
+and after changing the skew is shown for comparison.  
+Outliers are then removed using the interquartile range (IQR). A histogram and box plot of a column before and after the outliers is removed to show a comparison.  
+Finally, the correlation is compared using a heatmap and any columns that have a correlation above 0.9 are removed, with some columns remaining to make the data more understandable
+(e.g. id is removed, while member_id is kept). The heatmap is then shown again after removing these columns.
 
 ## Installation and usage
 All files are Python files and so can simply be downloaded to run.  
-The modules used the run this code are PyYAML (shown as yaml in the code), SQLAlchemy, psycopg2-binary (shown as psycopg2 in the code), Pandas and IPython. These can all be installed using pip.
+The modules used the run this code are PyYAML (shown as yaml in the code), SQLAlchemy, psycopg2-binary (shown as psycopg2 in the code), Pandas, numpy, missingno, statsmodels, matplotlib, seaborn, scipy and plotly. 
+These can all be installed using pip.
 
 ## File structure
-db_utils.py currently contains a class that creates an engine using a yaml file (not included to improve security), using one method in the class. It then creates a dataframe from this file in another method. Finally the dataframe is converted to a .csv file so the data can be easily analysed at a later date. The file is tested to be working in the final lines, printing the shape and the first five lines of the database.  
+db_utils.py currently contains a class that creates an engine using a yaml file (not included to improve security), using one method in the class. It then creates a dataframe from this file in another method. 
+Finally the dataframe is converted to a .csv file so the data can be easily analysed at a later date. The file is tested to be working in the final lines, printing the shape and the first five lines of the database.  
   
 loan_payments.csv contains the newly created database in a csv format. The table contains information about loan payments, with the following headers:  
 - **id**: unique id of the loan.
