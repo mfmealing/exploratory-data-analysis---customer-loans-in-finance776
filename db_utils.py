@@ -5,10 +5,11 @@ import pandas as pd
 import numpy as np
 import missingno as msno
 from statsmodels.graphics.gofplots import qqplot
-from matplotlib import pyplot
+import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
 import plotly.express as px
+from textwrap import wrap
 
 
 def load_yaml():
@@ -99,7 +100,7 @@ class DataFrameTransform:
 
     def impute_columns(self, new_df):
         new_df['funded_amount'].fillna((new_df['funded_amount'].mean()+loans_df['funded_amount'].median())/2, inplace=True)
-        new_df['term'].fillna("36 months", inplace=True)
+        new_df['term'].fillna("60 months", inplace=True)
         new_df['int_rate'].fillna(method="ffill", inplace=True)
         new_df['employment_length'].fillna(method="ffill", inplace=True)
         new_df['collections_12_mths_ex_med'].fillna(0, inplace=True)
@@ -135,17 +136,17 @@ class Plotter:
 
     def hist_plot(self, col):
         sns.histplot(col,label="Skewness: %.2f"%(col.skew()), bins=20)
-        pyplot.legend()
-        pyplot.show()
+        plt.legend()
+        plt.show()
 
     def qq_plot(self, col):
         qq_plot = qqplot(col , scale=1 ,line='q', fit=True)
-        pyplot.show()
+        plt.show()
 
     def box_plot(self,col):
-        pyplot.figure()
+        plt.figure()
         sns.boxplot(col, showfliers=True)
-        pyplot.show()
+        plt.show()
 
 
 if __name__ == "__main__":
@@ -209,21 +210,61 @@ if __name__ == "__main__":
                                                      'total_rec_prncp', 'total_rec_int', 'last_payment_amount'])
     #updated_loans_plot.hist_plot(updated_loans1['annual_inc'])
     #updated_loans_plot.box_plot(updated_loans1['annual_inc'])
-
+    print(updated_loans_new["term"].head(10))
     for column in updated_loans_new.columns:
         if updated_loans_new[column].dtype == 'object' or updated_loans_new[column].dtype == 'category':
             updated_loans_new.loc[:, column] = updated_loans_new[column].astype('category').cat.codes
         elif updated_loans_new[column].dtype == 'datetime64[ns]':
             updated_loans_new.loc[:,column] = pd.to_datetime(updated_loans_new[column])
-
+    print(updated_loans_new["term"].head(10))
     # Correlation threshold set to 0.9
     correlation = updated_loans_new.corr()
-    pyplot.figure(figsize = (20,20))
-    sns.heatmap(correlation, annot=True, fmt=".2f", cmap="coolwarm")
-    pyplot.show()
-    updated_loans_new.drop(labels=["id", "funded_amount_inv", "instalment", "grade", "out_prncp_inv", 
-                                   "total_payment_inv", "total_rec_prncp", "collection_recovery_fee"], axis=1, inplace=True)
+    #plt.figure(figsize = (20,20))
+    #sns.heatmap(correlation, annot=True, fmt=".2f", cmap="coolwarm")
+    #plt.show()
+    updated_loans_new.drop(labels=["id", "grade"], axis=1, inplace=True)
     correlation_new = updated_loans_new.corr()
-    pyplot.figure(figsize = (20,20))
-    sns.heatmap(correlation_new, annot=True, fmt=".2f", cmap="coolwarm")
-    pyplot.show()
+    #plt.figure(figsize = (20,20))
+    #sns.heatmap(correlation_new, annot=True, fmt=".2f", cmap="coolwarm")
+    #plt.show()
+
+    percent_loans = updated_loans_new["total_rec_prncp"].sum() / updated_loans_new["funded_amount"].sum()
+    percent_loans_inv = updated_loans_new["total_rec_prncp"].sum() / updated_loans_new["funded_amount_inv"].sum()
+    loans_6mths = updated_loans_new["total_rec_prncp"] + (updated_loans_new["instalment"]*6)
+    percent_loans_6mths = loans_6mths.sum() / updated_loans_new["funded_amount"].sum()
+    percent_loans_inv_6mths = loans_6mths.sum() / updated_loans_new["funded_amount_inv"].sum()
+
+    loans_state_data = {'Present day': [percent_loans_inv*100, percent_loans*100],
+                        'In 6 months': [percent_loans_inv_6mths*100, percent_loans_6mths*100]}
+    loans_state_df = pd.DataFrame(loans_state_data, columns=['Present day', 'In 6 months'], index = ['vs investor funding', 'vs total funding'])
+    loans_state_title = "Percentage of loans recovered against investor funding and total amount funded"
+    #loans_state_df.plot.bar()
+    #plt.xticks(rotation=0, horizontalalignment="center")
+    #plt.ylabel("Percentage")
+    #plt.legend(loc = 'upper center')
+    #plt.title('\n'.join(wrap(loans_state_title,50)))
+    #plt.show()
+
+    loans_losses = updated_loans_new[updated_loans_new["loan_status"] == 0]
+    percent_losses = len(loans_losses["loan_status"]) / len(updated_loans_new["loan_status"])
+    print("The percentage of charged off loans is: {0:.2f}%".format(percent_losses*100))
+    losses_num = loans_losses["total_rec_prncp"].sum()
+    print(f"The total paid towards these loans before being charged off is: £{losses_num:,}")
+
+    #loans_losses["monthly_losses"] = 0
+    #total_losses = loans_losses["loan_amount"] - loans_losses["total_rec_prncp"]
+    #print(total_losses.sum())
+    #losses_sum = []
+
+    #while loans_losses["monthly_losses"].sum() < total_losses.sum():
+    #    losses_sum.append(loans_losses["monthly_losses"].sum())
+    #    for j in range(len(loans_losses)):
+    #        if loans_losses["monthly_losses"].values[j] < total_losses.values[j]:
+    #            loans_losses["monthly_losses"].values[j] = loans_losses["monthly_losses"].values[j] + loans_losses["instalment"].values[j]
+    #
+    loans_losses["term"] = loans_losses["term"].map({1: np.timedelta64(5,'Y'), 0: np.timedelta64(3,'Y')})
+    loans_losses["final_payment_date"] = loans_losses["term"] + loans_losses["issue_date"]
+    loans_losses["mnths_remaining"] = loans_losses["final_payment_date"].dt.to_period('M').view(dtype='int64') - loans_losses["last_payment_date"].dt.to_period('M').view(dtype='int64')
+    #print(loans_losses["final_payment_date"], loans_losses["last_payment_date"])
+    #print(loans_losses["mnths_remaining"].value_counts())
+    print(loans_losses[loans_losses["last_payment_date"]>loans_losses["final_payment_date"]])
