@@ -47,7 +47,7 @@ class DataTransform:
 
     def update_cols(self):
         self.df = self.df.astype({"loan_amount":'float64', 
-                                  "issue_date":'datetime64[ns]', 
+                                  "issue_date":'datetime64[ns]',
                                   "earliest_credit_line":'datetime64[ns]',
                                   "last_payment_date":'datetime64[ns]',
                                   "next_payment_date":'datetime64[ns]',
@@ -171,6 +171,8 @@ if __name__ == "__main__":
     dropped_cols_loans = new_loans.drop_columns()
     dropped_rows_loans = new_loans.drop_rows(dropped_cols_loans)
     updated_loans = new_loans.impute_columns(dropped_rows_loans)
+    updated_loans["term"] = updated_loans["term"].map({"60 months": 60, "36 months": 36})
+    updated_loans = updated_loans.astype({"term":'int64'})
 
     # Shows the null count and percentage null count before and after applying the above code
     #loans_info = DataFrameInfo(loans_df)
@@ -210,23 +212,14 @@ if __name__ == "__main__":
                                                      'total_rec_prncp', 'total_rec_int', 'last_payment_amount'])
     #updated_loans_plot.hist_plot(updated_loans1['annual_inc'])
     #updated_loans_plot.box_plot(updated_loans1['annual_inc'])
-    print(updated_loans_new["term"].head(10))
-    for column in updated_loans_new.columns:
-        if updated_loans_new[column].dtype == 'object' or updated_loans_new[column].dtype == 'category':
-            updated_loans_new.loc[:, column] = updated_loans_new[column].astype('category').cat.codes
-        elif updated_loans_new[column].dtype == 'datetime64[ns]':
-            updated_loans_new.loc[:,column] = pd.to_datetime(updated_loans_new[column])
-    print(updated_loans_new["term"].head(10))
+
     # Correlation threshold set to 0.9
-    correlation = updated_loans_new.corr()
-    #plt.figure(figsize = (20,20))
+    loans_numeric = updated_loans_new.select_dtypes(include=['int64', 'float64'])
+    #correlation = loans_numeric.corr()
+    #plt.figure(figsize = (15,15))
     #sns.heatmap(correlation, annot=True, fmt=".2f", cmap="coolwarm")
     #plt.show()
-    updated_loans_new.drop(labels=["id", "grade"], axis=1, inplace=True)
-    correlation_new = updated_loans_new.corr()
-    #plt.figure(figsize = (20,20))
-    #sns.heatmap(correlation_new, annot=True, fmt=".2f", cmap="coolwarm")
-    #plt.show()
+    updated_loans_new.drop(labels=["id", "sub_grade"], axis=1, inplace=True)
 
     percent_loans = updated_loans_new["total_rec_prncp"].sum() / updated_loans_new["funded_amount"].sum()
     percent_loans_inv = updated_loans_new["total_rec_prncp"].sum() / updated_loans_new["funded_amount_inv"].sum()
@@ -245,11 +238,11 @@ if __name__ == "__main__":
     #plt.title('\n'.join(wrap(loans_state_title,50)))
     #plt.show()
 
-    loans_losses = updated_loans_new[updated_loans_new["loan_status"] == 0]
-    percent_losses = len(loans_losses["loan_status"]) / len(updated_loans_new["loan_status"])
+    loans_losses = updated_loans_new[updated_loans_new["loan_status"] == "Charged Off"]
+    percent_losses = len(loans_losses) / len(updated_loans_new)
     print("The percentage of charged off loans is: {0:.2f}%".format(percent_losses*100))
     losses_num = loans_losses["total_rec_prncp"].sum()
-    print(f"The total paid towards these loans before being charged off is: £{losses_num:,}")
+    print(f"The total paid towards these loans before being charged off is: £{losses_num:,.2f}")
 
     #loans_losses["monthly_losses"] = 0
     #total_losses = loans_losses["loan_amount"] - loans_losses["total_rec_prncp"]
@@ -261,10 +254,47 @@ if __name__ == "__main__":
     #    for j in range(len(loans_losses)):
     #        if loans_losses["monthly_losses"].values[j] < total_losses.values[j]:
     #            loans_losses["monthly_losses"].values[j] = loans_losses["monthly_losses"].values[j] + loans_losses["instalment"].values[j]
-    #
-    loans_losses["term"] = loans_losses["term"].map({1: np.timedelta64(5,'Y'), 0: np.timedelta64(3,'Y')})
+
+    loans_losses["term"] = loans_losses["term"].map({60: np.timedelta64(5,'Y'), 36: np.timedelta64(3,'Y')})
     loans_losses["final_payment_date"] = loans_losses["term"] + loans_losses["issue_date"]
     loans_losses["mnths_remaining"] = loans_losses["final_payment_date"].dt.to_period('M').view(dtype='int64') - loans_losses["last_payment_date"].dt.to_period('M').view(dtype='int64')
+    loans_losses["term"] = loans_losses["term"].map({np.timedelta64(5,'Y'): 60, np.timedelta64(3,'Y'): 36})
+    loans_losses["total_amount"] = loans_losses["instalment"] * loans_losses["term"]
+    loans_losses["total_loss"] = loans_losses["total_amount"] - loans_losses["total_rec_prncp"]
     #print(loans_losses["final_payment_date"], loans_losses["last_payment_date"])
     #print(loans_losses["mnths_remaining"].value_counts())
-    print(loans_losses[loans_losses["last_payment_date"]>loans_losses["final_payment_date"]])
+    #print(loans_losses[loans_losses["last_payment_date"]>loans_losses["final_payment_date"]])
+
+    loans_late = updated_loans_new[(updated_loans_new["loan_status"] == "Late (31-120 days)") | (updated_loans_new["loan_status"] == "Late (16-30 days)")]
+    percent_late = len(loans_late) / len(updated_loans_new)
+    print("The percentage of late loans is: {0:.2f}%".format(percent_late*100))
+    print("The number of late loans is:", len(loans_late))
+    loans_late["total_amount"] = loans_late["instalment"] * loans_late["term"]
+    loans_late["total_loss"] = loans_late["total_amount"] - loans_late["total_rec_prncp"]
+    late_num = loans_late["total_loss"].sum()
+    print(f"The total amount lost if these late loans were to be charged off is: £{late_num:,.2f}")
+    updated_loans_new["total_amount"] = updated_loans_new["instalment"] * updated_loans_new["term"]
+    percent_late_charged_off_loss = (loans_losses["total_loss"].sum() + loans_late["total_loss"].sum()) / updated_loans_new["total_amount"].sum()
+    print("The percentage lost to charged off or late loans is: {0:.2f}%".format(percent_late_charged_off_loss*100))
+
+    all_grade_percent = (updated_loans_new.grade.value_counts().sort_index() / len(updated_loans_new)) * 100
+    loss_grade_percent = (loans_losses.grade.value_counts().sort_index() / len(loans_losses)) * 100
+    late_grade_percent = (loans_late.grade.value_counts().sort_index() / len(loans_late)) * 100
+    all_home_percent = (updated_loans_new.home_ownership.value_counts() / len(updated_loans_new)) * 100
+    loss_home_percent = (loans_losses.home_ownership.value_counts() / len(loans_losses)) * 100
+    late_home_percent = (loans_late.home_ownership.value_counts() / len(loans_late)) * 100
+
+    fig, axes = plt.subplots(3, constrained_layout=True, figsize=(6, 8))
+    all_grade_percent.plot(kind="bar", ax=axes[0], ylabel = "Percentage", xlabel = "Grade", title = "Loan Grade Division - All Loans")
+    loss_grade_percent.plot(kind="bar", ax=axes[1], ylabel = "Percentage", xlabel = "Grade", title = "Loan Grade Division - Charged Off Loans")
+    late_grade_percent.plot(kind="bar", ax=axes[2], ylabel = "Percentage", xlabel = "Grade", title = "Loan Grade Division - Late Loans")
+    plt.show()
+
+    fig, axes = plt.subplots(3, constrained_layout=True, figsize=(6, 8))
+    all_home_percent.plot(kind="bar", ax=axes[0], ylabel = "Percentage", xlabel = "Grade", title = "Loan Grade Division - All Loans")
+    loss_home_percent.plot(kind="bar", ax=axes[1], ylabel = "Percentage", xlabel = "Grade", title = "Loan Grade Division - Charged Off Loans")
+    late_home_percent.plot(kind="bar", ax=axes[2], ylabel = "Percentage", xlabel = "Grade", title = "Loan Grade Division - Late Loans")
+    plt.xticks(rotation=30, horizontalalignment="center")
+    plt.show()
+    
+    
