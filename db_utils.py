@@ -1,7 +1,7 @@
+import pandas as pd
+import psycopg2
 import yaml
 from sqlalchemy import create_engine
-import psycopg2
-import pandas as pd
 
 def load_yaml():
     with open('credentials.yaml', 'r') as f:
