@@ -16,16 +16,20 @@ The skew of the data is then adjusted, with any columns that have a skew above 2
 and after changing the skew is shown for comparison.  
 Outliers are then removed using the interquartile range (IQR). A histogram and box plot of a column before and after the outliers is removed to show a comparison.  
 Finally, the correlation is compared using a heatmap and any columns that have a correlation above 0.9 are removed, with some columns remaining to make the data more understandable
-(e.g. id is removed, while member_id is kept). The heatmap is then shown again after removing these columns.
+for later analysis (e.g. id is removed, while member_id is kept).  
+  
+The data is then analysed, looking at both charged off loans and late loans and hwo much of a loss they are or could be to the company. An investigation is also made to see if any
+of the other columns have a link between these types of loans, and if people with certain information are more likely to defualt on their loans.  
 
 ## Installation and usage
-All files are Python files and so can simply be downloaded to run.  
-The modules used the run this code are PyYAML (shown as yaml in the code), SQLAlchemy, psycopg2-binary (shown as psycopg2 in the code), Pandas, numpy, missingno, statsmodels, matplotlib, seaborn, scipy and plotly. 
+The python file db_utils.py should be run first to download the database as a csv file to use within the EDA.ipynb file. The EDA.ipynb file works best when running from top to bottom but any of the later analysis
+can be run in any order.
+The modules used the run these files are PyYAML (shown as yaml in the code), SQLAlchemy, psycopg2-binary (shown as psycopg2 in the code), Pandas, numpy, missingno, statsmodels, matplotlib, seaborn, scipy and textwrap. 
 These can all be installed using pip.
 
 ## File structure
-db_utils.py currently contains a class that creates an engine using a yaml file (not included to improve security), using one method in the class. It then creates a dataframe from this file in another method. 
-Finally the dataframe is converted to a .csv file so the data can be easily analysed at a later date. The file is tested to be working in the final lines, printing the shape and the first five lines of the database.  
+db_utils.py currently contains a class that creates an engine using a yaml file (not included for security), using one method in the class. A .csv file is then created using this engine.  
+EDA. ipynb then takes this file and converts it to a dataframe to use during analysis, which is also contained within this file.  
   
 loan_payments.csv contains the newly created database in a csv format. The table contains information about loan payments, with the following headers:  
 - **id**: unique id of the loan.
