@@ -17,14 +17,13 @@ and after changing the skew is shown for comparison.
 Outliers are then removed using the interquartile range (IQR). A histogram and box plot of a column before and after the outliers is removed to show a comparison.  
 Finally, the correlation is compared using a heatmap and any columns that have a correlation above 0.9 are removed, with some columns remaining to make the data more understandable
 for later analysis (e.g. id is removed, while member_id is kept).  
-  
-The data is then analysed, looking at both charged off loans and late loans and hwo much of a loss they are or could be to the company. An investigation is also made to see if any
+The data is then analysed, looking at both charged off loans and late loans and how much of a loss they are or could be to the company. An investigation is also made to see if any
 of the other columns have a link between these types of loans, and if people with certain information are more likely to defualt on their loans.  
 
 ## Installation and usage
 The python file db_utils.py should be run first to download the database as a csv file to use within the EDA.ipynb file. The EDA.ipynb file works best when running from top to bottom but any of the later analysis
-can be run in any order.
-The modules used the run these files are PyYAML (shown as yaml in the code), SQLAlchemy, psycopg2-binary (shown as psycopg2 in the code), Pandas, numpy, missingno, statsmodels, matplotlib, seaborn, scipy and textwrap. 
+can be run in any order.  
+The modules used the run these files are PyYAML (shown as yaml in the code), SQLAlchemy, psycopg2-binary (shown as psycopg2 in the code), pandas, numpy, missingno, statsmodels, matplotlib, seaborn, scipy and textwrap. 
 These can all be installed using pip.
 
 ## File structure
